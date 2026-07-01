@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from wechat_agent.domain.events import LifeEvent, LifeEventType
 from wechat_agent.domain.messages import MessageType, NormalizedMessage, OutgoingMessage
-from wechat_agent.domain.tasks import ScheduledTask, TaskStatus
+from wechat_agent.domain.tasks import ScheduledTask, TaskStatus, TaskType
 from wechat_agent.llm.gateway import ChatRequest, LLMGateway
 from wechat_agent.memory.service import MemoryService
 from wechat_agent.policy.engine import PolicyEngine
@@ -29,6 +29,7 @@ class AgentOrchestrator:
         self._policy = policy
 
     def handle_message(self, message: NormalizedMessage) -> OutgoingMessage:
+        tone = self._policy.response_tone(message.user_id, message.timestamp)
         if message.message_type is MessageType.IMAGE and message.media_ref:
             self._memory.save_raw_message(message)
             analysis = self._llm.analyze_food_image(message.user_id, message.media_ref)
@@ -49,7 +50,7 @@ class AgentOrchestrator:
                 ChatRequest(
                     user_id=message.user_id,
                     intent="food_photo_response",
-                    tone="warm_daily",
+                    tone=tone,
                     user_text=None,
                     facts=analysis.payload,
                 )
@@ -83,7 +84,7 @@ class AgentOrchestrator:
             ChatRequest(
                 user_id=message.user_id,
                 intent=intent,
-                tone="warm_daily",
+                tone=tone,
                 user_text=message.content,
                 memories=[
                     memory.content
@@ -107,6 +108,7 @@ class AgentOrchestrator:
     ) -> OutgoingMessage:
         decision = self._policy.evaluate_checkin(task.user_id, task.task_type, now)
         if not decision.allowed:
+            self._mark_task_status(task, TaskStatus.EXPIRED)
             return OutgoingMessage(
                 conversation_id=task.conversation_id,
                 channel=task.channel,
@@ -117,6 +119,15 @@ class AgentOrchestrator:
                     "suppressed": True,
                     "reason": decision.reason,
                 },
+            )
+
+        if task.task_type is TaskType.USER_REMINDER:
+            self._mark_task_status(task, TaskStatus.SENT)
+            return OutgoingMessage(
+                conversation_id=task.conversation_id,
+                channel=task.channel,
+                content=str(task.payload.get("content", "")).strip(),
+                metadata={"task_id": task.task_id, "intent": task.task_type.value},
             )
 
         response = self._llm.chat(
@@ -133,16 +144,19 @@ class AgentOrchestrator:
                 facts=task.payload,
             )
         )
-        try:
-            self._store.tasks.update_status(task.task_id, TaskStatus.SENT)
-        except KeyError:
-            self._store.tasks.save(task.model_copy(update={"status": TaskStatus.SENT}))
+        self._mark_task_status(task, TaskStatus.SENT)
         return OutgoingMessage(
             conversation_id=task.conversation_id,
             channel=task.channel,
             content=response.content,
             metadata={"task_id": task.task_id, "intent": task.task_type.value},
         )
+
+    def _mark_task_status(self, task: ScheduledTask, status: TaskStatus) -> None:
+        try:
+            self._store.tasks.update_status(task.task_id, status)
+        except KeyError:
+            self._store.tasks.save(task.model_copy(update={"status": status}))
 
     @staticmethod
     def _resolve_reminder_trigger_at(

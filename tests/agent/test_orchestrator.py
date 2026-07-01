@@ -115,6 +115,29 @@ def test_scheduled_morning_checkin_generates_natural_message():
     assert "How did you sleep last night" in outgoing.content
 
 
+def test_scheduled_user_reminder_delivers_original_reminder_content():
+    orchestrator, store = build_orchestrator()
+    now = datetime(2026, 7, 2, 8, 0, tzinfo=UTC)
+    task = ScheduledTask(
+        task_id="task-reminder-1",
+        user_id="user-1",
+        conversation_id="conv-1",
+        channel="test",
+        task_type=TaskType.USER_REMINDER,
+        status=TaskStatus.PENDING,
+        trigger_at=now,
+        payload={"content": "Take your vitamins."},
+        source_message_id="msg-42",
+    )
+    store.tasks.save(task)
+
+    outgoing = orchestrator.handle_scheduled_task(task, now=now)
+
+    assert outgoing.content == "Take your vitamins."
+    assert outgoing.metadata["intent"] == "user_reminder"
+    assert store.tasks.list_due("user-1", now.isoformat()) == []
+
+
 def test_quiet_mode_suppresses_routine_scheduled_checkin():
     orchestrator, store = build_orchestrator()
     now = datetime(2026, 7, 1, 8, 0, tzinfo=UTC)
@@ -149,5 +172,70 @@ def test_quiet_mode_suppresses_routine_scheduled_checkin():
     assert outgoing.content == ""
     assert outgoing.metadata["suppressed"] is True
     assert outgoing.metadata["reason"] == "quiet_mode_blocks_routine_checkin"
-    assert due[0].task_id == "task-quiet-1"
-    assert due[0].status is TaskStatus.PENDING
+    assert due == []
+
+
+def test_quiet_mode_inbound_text_reply_uses_gentle_tone():
+    orchestrator, store = build_orchestrator()
+    now = datetime(2026, 7, 1, 8, 0, tzinfo=UTC)
+    store.modes.save(
+        ModeConfig(
+            user_id="user-1",
+            mode=AgentMode.QUIET,
+            started_at=now,
+            expires_at=None,
+            do_not_disturb_windows=[],
+            daily_checkin_windows={},
+            tone_preferences={},
+            memory_strategy="explicit_only",
+        )
+    )
+    message = NormalizedMessage(
+        message_id="msg-quiet-1",
+        user_id="user-1",
+        conversation_id="conv-1",
+        channel="test",
+        direction=MessageDirection.INBOUND,
+        message_type=MessageType.TEXT,
+        content="I am overwhelmed today.",
+        media_ref=None,
+        timestamp=now,
+        metadata={},
+    )
+
+    reply = orchestrator.handle_message(message)
+
+    assert reply.content == "I am here. We can go slowly."
+
+
+def test_coach_mode_inbound_image_reply_uses_encouraging_tone():
+    orchestrator, store = build_orchestrator()
+    now = datetime(2026, 7, 1, 12, 0, tzinfo=UTC)
+    store.modes.save(
+        ModeConfig(
+            user_id="user-1",
+            mode=AgentMode.COACH,
+            started_at=now,
+            expires_at=None,
+            do_not_disturb_windows=[],
+            daily_checkin_windows={},
+            tone_preferences={},
+            memory_strategy="active_tracking",
+        )
+    )
+    message = NormalizedMessage(
+        message_id="msg-coach-1",
+        user_id="user-1",
+        conversation_id="conv-1",
+        channel="test",
+        direction=MessageDirection.INBOUND,
+        message_type=MessageType.IMAGE,
+        content=None,
+        media_ref="meal.jpg",
+        timestamp=now,
+        metadata={},
+    )
+
+    reply = orchestrator.handle_message(message)
+
+    assert reply.content == "Nice. I will save this as an estimate so we can keep tracking."

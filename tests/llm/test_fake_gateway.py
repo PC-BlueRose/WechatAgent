@@ -84,6 +84,24 @@ def test_fake_gateway_chat_varies_by_tone_for_same_intent():
     assert encouraging.content == "Good morning. How did you sleep last night? Let's build on today."
 
 
+def test_fake_gateway_user_reminder_chat_uses_payload_content():
+    gateway = FakeLLMGateway()
+
+    response = gateway.chat(
+        ChatRequest(
+            user_id="user-1",
+            intent="user_reminder",
+            tone="gentle",
+            user_text=None,
+            memories=[],
+            recent_messages=[],
+            facts={"content": "Take your vitamins."},
+        )
+    )
+
+    assert response.content == "Reminder: Take your vitamins."
+
+
 def test_fake_gateway_extracts_reminder_event_from_text():
     gateway = FakeLLMGateway()
 

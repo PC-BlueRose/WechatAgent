@@ -37,6 +37,9 @@ class PolicyEngine:
             return AgentMode.DAILY
         return config.mode
 
+    def response_tone(self, user_id: str, now: datetime) -> str:
+        return self._tone_for_mode(self.get_effective_mode(user_id, now))
+
     def evaluate_checkin(
         self, user_id: str, task_type: TaskType, now: datetime
     ) -> PolicyDecision:
@@ -46,7 +49,7 @@ class PolicyEngine:
             return PolicyDecision(
                 allowed=False,
                 reason="quiet_mode_blocks_routine_checkin",
-                tone="gentle",
+                tone=self._tone_for_mode(mode),
                 memory_strategy="explicit_only",
             )
 
@@ -54,7 +57,7 @@ class PolicyEngine:
             return PolicyDecision(
                 allowed=True,
                 reason="coach_mode_allows_task",
-                tone="encouraging",
+                tone=self._tone_for_mode(mode),
                 memory_strategy="active_tracking",
             )
 
@@ -62,13 +65,21 @@ class PolicyEngine:
             return PolicyDecision(
                 allowed=True,
                 reason="quiet_mode_allows_important_task",
-                tone="gentle",
+                tone=self._tone_for_mode(mode),
                 memory_strategy="explicit_only",
             )
 
         return PolicyDecision(
             allowed=True,
             reason="daily_mode_allows_task",
-            tone="warm_daily",
+            tone=self._tone_for_mode(mode),
             memory_strategy="routine_auto",
         )
+
+    @staticmethod
+    def _tone_for_mode(mode: AgentMode) -> str:
+        if mode is AgentMode.QUIET:
+            return "gentle"
+        if mode is AgentMode.COACH:
+            return "encouraging"
+        return "warm_daily"

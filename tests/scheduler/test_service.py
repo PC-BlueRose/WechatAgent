@@ -1,5 +1,6 @@
 from datetime import UTC, date, datetime
 
+from wechat_agent.domain.modes import AgentMode, ModeConfig
 from wechat_agent.domain.tasks import TaskStatus, TaskType
 from wechat_agent.policy.engine import PolicyEngine
 from wechat_agent.scheduler.service import SchedulerService
@@ -61,3 +62,32 @@ def test_create_user_reminder_preserves_required_fields():
     due = service.due_allowed_tasks("user-1", datetime(2026, 7, 1, 19, 0, tzinfo=UTC))
 
     assert task in due
+
+
+def test_due_allowed_tasks_expires_quiet_mode_routine_checkins():
+    store = InMemoryStore()
+    now = datetime(2026, 7, 1, 8, 1, tzinfo=UTC)
+    store.modes.save(
+        ModeConfig(
+            user_id="user-1",
+            mode=AgentMode.QUIET,
+            started_at=now,
+            expires_at=now.replace(hour=9, minute=0),
+            do_not_disturb_windows=[],
+            daily_checkin_windows={},
+            tone_preferences={},
+            memory_strategy="explicit_only",
+        )
+    )
+    service = SchedulerService(store=store, policy=PolicyEngine(store.modes))
+    tasks = service.create_daily_checkins("user-1", "conv-1", "test", date(2026, 7, 1))
+
+    due_during_quiet = service.due_allowed_tasks("user-1", now)
+    due_after_quiet = service.due_allowed_tasks(
+        "user-1", datetime(2026, 7, 1, 9, 5, tzinfo=UTC)
+    )
+
+    assert due_during_quiet == []
+    assert due_after_quiet == []
+    assert tasks[0].task_type is TaskType.MORNING_CHECKIN
+    assert store.tasks.list_due("user-1", now.isoformat()) == []

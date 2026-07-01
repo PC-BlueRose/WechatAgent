@@ -76,4 +76,6 @@ class SchedulerService:
             decision = self._policy.evaluate_checkin(user_id, task.task_type, now)
             if decision.allowed:
                 allowed.append(task)
+                continue
+            self._store.tasks.update_status(task.task_id, TaskStatus.EXPIRED)
         return allowed

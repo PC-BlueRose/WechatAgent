@@ -58,6 +58,20 @@ class FakeLLMGateway:
                     "Got it. I will remind you when it is time.",
                 )
             )
+        if request.intent == "user_reminder":
+            reminder = str(request.facts.get("content", "")).strip()
+            content = reminder or "It is time."
+            return ChatResponse(
+                content=self._tone_variant(
+                    request.tone,
+                    {
+                        "gentle": f"Reminder: {content}",
+                        "warm_daily": f"Reminder: {content}",
+                        "encouraging": f"Reminder: {content}",
+                    },
+                    f"Reminder: {content}",
+                )
+            )
         return ChatResponse(
             content=self._tone_variant(
                 request.tone,
