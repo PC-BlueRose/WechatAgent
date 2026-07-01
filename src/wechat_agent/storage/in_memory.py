@@ -48,6 +48,9 @@ class InMemoryMemoryRepository:
     def save(self, memory: LongTermMemory) -> None:
         self._memories[memory.memory_id] = memory
 
+    def get(self, memory_id: str) -> LongTermMemory | None:
+        return self._memories.get(memory_id)
+
     def list_active(self, user_id: str) -> list[LongTermMemory]:
         return [
             memory

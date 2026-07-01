@@ -71,3 +71,41 @@ Addressed review feedback in `InMemoryTaskRepository.list_due(self, user_id: str
 
 - `src/wechat_agent/storage/in_memory.py`
 - `tests/storage/test_in_memory.py`
+
+## Follow-up Fix: Memory Repository Lookup by `memory_id`
+
+Applied the approved Task 3 amendment so memory repositories can look up a memory directly by `memory_id`, which unblocks later forgetting flows without private backend access.
+
+### Implementation Summary
+
+- Added `MemoryRepository.get(memory_id: str) -> LongTermMemory | None` to the storage repository protocol in `src/wechat_agent/storage/repositories.py`
+- Implemented `InMemoryMemoryRepository.get()` in `src/wechat_agent/storage/in_memory.py`
+- Added a focused storage test that proves saved memories can be retrieved by `memory_id` and that unknown IDs return `None`
+
+### Tests and Results
+
+- Command: `py -3.14 -m pytest tests\storage\test_in_memory.py -v`
+- Result: `3 passed`
+
+### TDD RED/GREEN Evidence
+
+#### RED
+
+- Command: `py -3.14 -m pytest tests\storage\test_in_memory.py -v`
+- Result: `test_in_memory_store_gets_memory_by_memory_id` failed with `AttributeError: 'InMemoryMemoryRepository' object has no attribute 'get'`
+
+#### GREEN
+
+- Command: `py -3.14 -m pytest tests\storage\test_in_memory.py -v`
+- Result: all storage tests passed, including `test_in_memory_store_gets_memory_by_memory_id`
+
+### Files Changed
+
+- `src/wechat_agent/storage/repositories.py`
+- `src/wechat_agent/storage/in_memory.py`
+- `tests/storage/test_in_memory.py`
+- `.superpowers/sdd/task-3-report.md`
+
+### Concerns
+
+- None for Task 3 scope.

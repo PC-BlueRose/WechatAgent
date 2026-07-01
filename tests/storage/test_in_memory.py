@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 
 from wechat_agent.domain.events import LifeEvent, LifeEventType
+from wechat_agent.domain.memory import LongTermMemory, MemoryState
 from wechat_agent.domain.messages import MessageDirection, MessageType, NormalizedMessage
 from wechat_agent.domain.tasks import ScheduledTask, TaskStatus, TaskType
 from wechat_agent.storage.in_memory import InMemoryStore
@@ -57,3 +58,25 @@ def test_in_memory_store_lists_due_tasks_using_datetime_comparison():
     store.tasks.save(task)
 
     assert store.tasks.list_due("user-1", "2026-07-01T10:00:00+01:00") == []
+
+
+def test_in_memory_store_gets_memory_by_memory_id():
+    store = InMemoryStore()
+    memory = LongTermMemory(
+        memory_id="mem-1",
+        user_id="user-1",
+        category="preference",
+        content="Prefers tea in the afternoon.",
+        importance=0.7,
+        confidence=0.9,
+        source_ref="msg-1",
+        created_at=datetime(2026, 7, 1, 8, 0, tzinfo=UTC),
+        updated_at=datetime(2026, 7, 1, 8, 0, tzinfo=UTC),
+        state=MemoryState.ACTIVE,
+        embedding=None,
+    )
+
+    store.memories.save(memory)
+
+    assert store.memories.get("mem-1") == memory
+    assert store.memories.get("missing-memory") is None
