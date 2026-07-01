@@ -11,16 +11,64 @@ from wechat_agent.llm.gateway import (
 
 
 class FakeLLMGateway:
+    def _tone_variant(self, tone: str, variants: dict[str, str], default: str) -> str:
+        return variants.get(tone, default)
+
     def chat(self, request: ChatRequest) -> ChatResponse:
         if request.intent == "morning_checkin":
-            return ChatResponse(content="Morning. How did you sleep last night? Any dreams?")
+            return ChatResponse(
+                content=self._tone_variant(
+                    request.tone,
+                    {
+                        "gentle": "Hey. How did you sleep last night?",
+                        "warm_daily": "Morning. How did you sleep last night? Any dreams?",
+                        "encouraging": (
+                            "Good morning. How did you sleep last night? "
+                            "Let's build on today."
+                        ),
+                    },
+                    "Morning. How did you sleep last night? Any dreams?",
+                )
+            )
         if request.intent == "food_photo_response":
             return ChatResponse(
-                content="I will save this as an estimate, not a precise measurement."
+                content=self._tone_variant(
+                    request.tone,
+                    {
+                        "gentle": "I will save this as an estimate.",
+                        "warm_daily": (
+                            "I will save this as an estimate, not a precise measurement."
+                        ),
+                        "encouraging": (
+                            "Nice. I will save this as an estimate so we can keep tracking."
+                        ),
+                    },
+                    "I will save this as an estimate, not a precise measurement.",
+                )
             )
         if request.intent == "reminder_confirmation":
-            return ChatResponse(content="Got it. I will remind you when it is time.")
-        return ChatResponse(content="I am here. Take your time.")
+            return ChatResponse(
+                content=self._tone_variant(
+                    request.tone,
+                    {
+                        "gentle": "Okay. I will remind you when it is time.",
+                        "warm_daily": "Got it. I will remind you when it is time.",
+                        "encouraging": "Got it. I will remind you and help you follow through.",
+                    },
+                    "Got it. I will remind you when it is time.",
+                )
+            )
+        return ChatResponse(
+            content=self._tone_variant(
+                request.tone,
+                {
+                    "gentle": "I am here. We can go slowly.",
+                    "warm_daily": "I am here. Take your time.",
+                    "encouraging": "I am here. We can take the next step together.",
+                },
+                "I am here. Take your time.",
+            )
+        )
 
     def extract_life_events(
         self, user_id: str, source_message_id: str, text: str
