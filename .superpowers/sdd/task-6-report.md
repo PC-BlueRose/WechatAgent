@@ -78,3 +78,40 @@ Observed result:
 ## Concerns
 
 - `forget_memory` reads the backing in-memory repository dictionary to locate a memory by ID because the current repository API does not expose a `get(...)` method. This stays within the existing boundary constraints for Task 6, but a future repository abstraction may want an explicit lookup method.
+
+## Review Fixes
+
+Addressed the two Task 6 review findings in a follow-up change:
+
+- Removed private repository coupling from `forget_memory()`. The service now tracks memory ownership through its own public interactions and forgets memories using only `list_active(...)` plus `replace(...)`.
+- Made recall ranking explicit for embedding dimension mismatches. `_embedding_distance(...)` now raises `ValueError` when memory and query embeddings do not have the same length instead of truncating with `zip(...)`.
+- Updated tests to verify forgetting behavior through public repository/service behavior rather than private dictionary access, and added coverage for dimension mismatch failure.
+
+Follow-up test command:
+
+```powershell
+py -3.14 -m pytest tests\memory\test_service.py -v
+```
+
+Follow-up result:
+
+- `6 passed in 0.13s`
+
+## Repository Contract Follow-Up
+
+After the Task 3 repository contract amendment added `self._store.memories.get(memory_id)`, Task 6 was simplified again:
+
+- Removed the transient `_memory_owners` workaround from `MemoryService`.
+- Updated `forget_memory()` to use the public repository lookup directly via `self._store.memories.get(memory_id)` and continue updating state with `replace(...)`.
+- Kept the explicit embedding-dimension mismatch protection in recall ranking.
+- Added a forgetting test that uses a fresh `MemoryService` instance against the same store so the behavior does not depend on in-process owner caching.
+
+Repository-contract follow-up test command:
+
+```powershell
+py -3.14 -m pytest tests\memory\test_service.py -v
+```
+
+Repository-contract follow-up result:
+
+- `7 passed in 0.12s`

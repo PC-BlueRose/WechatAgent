@@ -14,7 +14,6 @@ class MemoryService:
     def __init__(self, store: InMemoryStore, llm: LLMGateway) -> None:
         self._store = store
         self._llm = llm
-        self._memory_owners: dict[str, str] = {}
 
     def save_raw_message(self, message: NormalizedMessage) -> None:
         self._store.messages.save(message)
@@ -67,14 +66,11 @@ class MemoryService:
             embedding=self._llm.embed(content).embedding,
         )
         self._store.memories.save(memory)
-        self._memory_owners[memory.memory_id] = user_id
         return memory
 
     def recall(self, user_id: str, query: str, limit: int = 5) -> list[LongTermMemory]:
         query_embedding = self._llm.embed(query).embedding
         memories = self._store.memories.list_active(user_id)
-        for memory in memories:
-            self._memory_owners[memory.memory_id] = memory.user_id
         ranked = sorted(
             memories,
             key=lambda memory: (
@@ -85,17 +81,7 @@ class MemoryService:
         return ranked[:limit]
 
     def forget_memory(self, memory_id: str) -> None:
-        user_id = self._memory_owners.get(memory_id)
-        if user_id is None:
-            return
-        memory = next(
-            (
-                active_memory
-                for active_memory in self._store.memories.list_active(user_id)
-                if active_memory.memory_id == memory_id
-            ),
-            None,
-        )
+        memory = self._store.memories.get(memory_id)
         if memory is None:
             return
 

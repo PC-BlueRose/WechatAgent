@@ -95,7 +95,29 @@ def test_forget_memory_marks_memory_denied():
 
     assert store.memories.list_active("user-1") == []
     assert service.recall(user_id="user-1", query="gentle reminders") == []
-    assert memory.state is MemoryState.ACTIVE
+    stored_memory = store.memories.get(memory.memory_id)
+    assert stored_memory is not None
+    assert stored_memory.state is MemoryState.DENIED
+
+
+def test_memory_service_forget_works_without_prior_owner_caching():
+    store = InMemoryStore()
+    service = MemoryService(store=store, llm=FakeLLMGateway())
+    memory = service.remember_candidate(
+        user_id="user-1",
+        category="preference",
+        content="User prefers gentle reminders.",
+        source_ref="msg-1",
+    )
+
+    fresh_service = MemoryService(store=store, llm=FakeLLMGateway())
+
+    fresh_service.forget_memory(memory.memory_id)
+
+    assert store.memories.list_active("user-1") == []
+    stored_memory = store.memories.get(memory.memory_id)
+    assert stored_memory is not None
+    assert stored_memory.state is MemoryState.DENIED
 
 
 def test_memory_service_forget_preserves_other_active_memories():
