@@ -30,7 +30,7 @@ class TestChannelAdapter:
             content=raw.get("content") if isinstance(raw.get("content"), str) else None,
             media_ref=raw.get("media_ref") if isinstance(raw.get("media_ref"), str) else None,
             timestamp=raw["timestamp"],
-            metadata={"raw": "test_channel"},
+            metadata={"raw": dict(raw)},
         )
 
     def send(self, message: OutgoingMessage) -> None:

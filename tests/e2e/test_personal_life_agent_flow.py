@@ -39,5 +39,9 @@ def test_e2e_daily_checkin_sleep_reply_and_food_photo_flow():
     )
 
     event_types = [event.event_type.value for event in store.life_events.list_for_user("user-1")]
+    recent_messages = store.messages.list_recent("user-1", limit=2)
+
     assert event_types == ["sleep", "meal"]
     assert len(channel.sent_messages) == 3
+    assert recent_messages[0].metadata["raw"]["message_type"] == "image"
+    assert recent_messages[0].metadata["raw"]["media_ref"] == "meal.jpg"

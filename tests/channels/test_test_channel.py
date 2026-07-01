@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 
 from wechat_agent.agent.orchestrator import AgentOrchestrator
 from wechat_agent.channels.test_channel import TestChannelAdapter
+from wechat_agent.domain.messages import MessageDirection, MessageType
 from wechat_agent.llm.fake_gateway import FakeLLMGateway
 from wechat_agent.memory.service import MemoryService
 from wechat_agent.policy.engine import PolicyEngine
@@ -19,6 +20,26 @@ def build_channel():
     return TestChannelAdapter(orchestrator=orchestrator), store
 
 
+def test_test_channel_normalize_preserves_inbound_contract_and_raw_payload():
+    channel, _store = build_channel()
+    raw = {
+        "message_id": "msg-raw-1",
+        "user_id": "user-1",
+        "conversation_id": "conv-1",
+        "message_type": "text",
+        "content": "I slept around 2.",
+        "timestamp": datetime(2026, 7, 1, 8, 0, tzinfo=UTC),
+    }
+
+    message = channel.normalize(raw)
+
+    assert message.channel == "test"
+    assert message.direction is MessageDirection.INBOUND
+    assert message.message_type is MessageType.TEXT
+    assert message.content == "I slept around 2."
+    assert message.metadata["raw"] == raw
+
+
 def test_test_channel_receives_text_and_sends_reply():
     channel, store = build_channel()
 
@@ -29,5 +50,12 @@ def test_test_channel_receives_text_and_sends_reply():
         timestamp=datetime(2026, 7, 1, 8, 0, tzinfo=UTC),
     )
 
+    stored_message = store.messages.list_recent("user-1", limit=1)[0]
+
     assert reply in channel.sent_messages
+    assert stored_message.channel == "test"
+    assert stored_message.direction is MessageDirection.INBOUND
+    assert stored_message.message_type is MessageType.TEXT
+    assert stored_message.metadata["raw"]["message_type"] == "text"
+    assert stored_message.metadata["raw"]["content"] == "I slept around 2."
     assert len(store.life_events.list_for_user("user-1")) == 1

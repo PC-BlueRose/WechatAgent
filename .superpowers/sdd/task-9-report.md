@@ -203,3 +203,47 @@ tests/e2e/test_personal_life_agent_flow.py::test_e2e_daily_checkin_sleep_reply_a
 No additional time was spent on `ruff` installation. The earlier environment finding still stands:
 
 - `py -3.14 -m ruff check .` could not run because `ruff` is not installed for Python 3.14 on this machine.
+
+## Fix Round: Raw Payload Preservation and Channel Contract Tests
+
+Addressed the review findings by preserving the actual inbound raw payload in `TestChannelAdapter.normalize()` and strengthening the Task 9 tests around the normalization contract.
+
+### Changes
+
+- `src/wechat_agent/channels/test_channel.py`
+  - Changed normalized metadata from a placeholder tag to the actual raw inbound payload: `metadata={"raw": dict(raw)}`
+- `tests/channels/test_test_channel.py`
+  - Added a direct normalization-contract test covering:
+    - `channel == "test"`
+    - `direction is MessageDirection.INBOUND`
+    - `message_type is MessageType.TEXT`
+    - preserved raw metadata equality
+  - Strengthened the receive-text test to assert the stored inbound message preserves channel, direction, message type, and raw metadata fields.
+- `tests/e2e/test_personal_life_agent_flow.py`
+  - Added a light end-to-end assertion that the stored inbound image message preserves raw metadata for image flow.
+
+### Focused Task 9 Re-Run
+
+Command:
+
+```bash
+py -3.14 -m pytest tests/channels/test_test_channel.py tests/e2e/test_personal_life_agent_flow.py -v
+```
+
+Output summary:
+
+- Passed.
+- `3 passed in 0.14s`
+
+### Full Suite Re-Run
+
+Command:
+
+```bash
+py -3.14 -m pytest -v
+```
+
+Output summary:
+
+- Passed.
+- `35 passed in 0.16s`
