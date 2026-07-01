@@ -93,3 +93,26 @@ Result:
 
 - The scheduler public interface now has direct targeted coverage for both daily check-ins and user reminder creation.
 - Scope remained limited to Task 7 owned files plus the task report.
+
+## Review Fix Follow-Up 2
+
+Addressed the remaining review gap that the reminder test verified only the returned object and not the persistence side effect.
+
+Strengthened `test_create_user_reminder_preserves_required_fields` so it still checks the returned reminder fields and now also proves the task is stored and discoverable by asserting the created reminder appears in `due_allowed_tasks(...)` after its trigger time.
+
+### Follow-Up 2 Test Results
+
+Command run:
+
+```powershell
+py -3.14 -m pytest tests\scheduler\test_service.py -v
+```
+
+Result:
+
+- `3 passed in 0.12s`
+
+### Updated Self-Review 2
+
+- Reminder coverage now verifies both object correctness and persistence/discoverability through the scheduler service public surface.
+- Scope remained limited to Task 7 owned files plus the task report.

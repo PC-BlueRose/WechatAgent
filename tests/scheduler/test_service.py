@@ -57,3 +57,7 @@ def test_create_user_reminder_preserves_required_fields():
     assert task.trigger_at == trigger_at
     assert task.payload["content"] == "Take your vitamins."
     assert task.source_message_id == "msg-42"
+
+    due = service.due_allowed_tasks("user-1", datetime(2026, 7, 1, 19, 0, tzinfo=UTC))
+
+    assert task in due
