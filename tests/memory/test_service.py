@@ -1,9 +1,12 @@
 from datetime import UTC, datetime
 
+import pytest
+
 from wechat_agent.domain.events import LifeEventType
 from wechat_agent.domain.memory import MemoryState
 from wechat_agent.domain.messages import MessageDirection, MessageType, NormalizedMessage
 from wechat_agent.llm.fake_gateway import FakeLLMGateway
+from wechat_agent.llm.gateway import EmbeddingResult
 from wechat_agent.memory.service import MemoryService
 from wechat_agent.storage.in_memory import InMemoryStore
 
@@ -91,5 +94,48 @@ def test_forget_memory_marks_memory_denied():
     service.forget_memory(memory.memory_id)
 
     assert store.memories.list_active("user-1") == []
-    denied_memory = store.memories._memories[memory.memory_id]
-    assert denied_memory.state is MemoryState.DENIED
+    assert service.recall(user_id="user-1", query="gentle reminders") == []
+    assert memory.state is MemoryState.ACTIVE
+
+
+def test_memory_service_forget_preserves_other_active_memories():
+    store = InMemoryStore()
+    service = MemoryService(store=store, llm=FakeLLMGateway())
+    forgotten = service.remember_candidate(
+        user_id="user-1",
+        category="preference",
+        content="User prefers gentle reminders.",
+        source_ref="msg-1",
+    )
+    kept = service.remember_candidate(
+        user_id="user-1",
+        category="plan",
+        content="User wants a stretch plan.",
+        source_ref="msg-2",
+    )
+
+    service.forget_memory(forgotten.memory_id)
+
+    assert store.memories.list_active("user-1") == [kept]
+    assert store.memories.list_active("user-1")[0].state is MemoryState.ACTIVE
+
+
+class MismatchedEmbeddingGateway(FakeLLMGateway):
+    def embed(self, text: str) -> EmbeddingResult:
+        if text == "stored memory":
+            return EmbeddingResult(embedding=[0.2, 0.1, 1.0])
+        return EmbeddingResult(embedding=[0.2, 0.1])
+
+
+def test_memory_service_recall_raises_on_embedding_dimension_mismatch():
+    store = InMemoryStore()
+    service = MemoryService(store=store, llm=MismatchedEmbeddingGateway())
+    service.remember_candidate(
+        user_id="user-1",
+        category="plan",
+        content="stored memory",
+        source_ref="msg-1",
+    )
+
+    with pytest.raises(ValueError, match="Embedding dimension mismatch"):
+        service.recall(user_id="user-1", query="query", limit=1)
