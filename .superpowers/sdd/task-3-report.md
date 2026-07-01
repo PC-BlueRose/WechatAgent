@@ -44,3 +44,30 @@ The implementation matches the Task 1-2 domain model types directly and keeps be
 ## Concerns
 
 - None for Task 3 scope.
+
+## Follow-up Fix: Due Task Datetime Comparison
+
+Addressed review feedback in `InMemoryTaskRepository.list_due(self, user_id: str, now_iso: str)` without changing the public signature from the brief.
+
+### Fix Summary
+
+- Parsed `now_iso` with `datetime.fromisoformat(now_iso)` inside `list_due()`
+- Compared `task.trigger_at <= now` as datetimes rather than comparing ISO-formatted strings lexicographically
+- Added a focused regression test covering timezone-offset input where string ordering and real datetime ordering diverge
+
+### Follow-up TDD Evidence
+
+#### RED
+
+- Command: `py -3.14 -m pytest tests\storage\test_in_memory.py -v`
+- Result: `test_in_memory_store_lists_due_tasks_using_datetime_comparison` failed because the string-based comparison incorrectly returned a pending task as due for `2026-07-01T10:00:00+01:00`
+
+#### GREEN
+
+- Command: `py -3.14 -m pytest tests\storage\test_in_memory.py -v`
+- Result: `2 passed`
+
+### Follow-up Files Changed
+
+- `src/wechat_agent/storage/in_memory.py`
+- `tests/storage/test_in_memory.py`

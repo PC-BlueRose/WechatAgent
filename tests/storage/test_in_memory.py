@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 
 from wechat_agent.domain.events import LifeEvent, LifeEventType
 from wechat_agent.domain.messages import MessageDirection, MessageType, NormalizedMessage
+from wechat_agent.domain.tasks import ScheduledTask, TaskStatus, TaskType
 from wechat_agent.storage.in_memory import InMemoryStore
 
 
@@ -37,3 +38,22 @@ def test_in_memory_store_saves_raw_messages_before_events():
 
     assert store.messages.get("msg-1") == message
     assert store.life_events.list_for_user("user-1")[0].source_message_id == "msg-1"
+
+
+def test_in_memory_store_lists_due_tasks_using_datetime_comparison():
+    store = InMemoryStore()
+    task = ScheduledTask(
+        task_id="task-1",
+        user_id="user-1",
+        conversation_id="conv-1",
+        channel="test",
+        task_type=TaskType.USER_REMINDER,
+        status=TaskStatus.PENDING,
+        trigger_at=datetime(2026, 7, 1, 9, 30, tzinfo=UTC),
+        payload={},
+        source_message_id=None,
+    )
+
+    store.tasks.save(task)
+
+    assert store.tasks.list_due("user-1", "2026-07-01T10:00:00+01:00") == []

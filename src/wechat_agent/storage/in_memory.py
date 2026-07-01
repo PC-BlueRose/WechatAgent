@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from dataclasses import dataclass, field
 
 from wechat_agent.domain.events import LifeEvent, LifeEventType
@@ -77,12 +78,13 @@ class InMemoryTaskRepository:
         self._tasks[task.task_id] = task
 
     def list_due(self, user_id: str, now_iso: str) -> list[ScheduledTask]:
+        now = datetime.fromisoformat(now_iso)
         return [
             task
             for task in self._tasks.values()
             if task.user_id == user_id
             and task.status is TaskStatus.PENDING
-            and task.trigger_at.isoformat() <= now_iso
+            and task.trigger_at <= now
         ]
 
     def update_status(self, task_id: str, status: TaskStatus) -> None:
