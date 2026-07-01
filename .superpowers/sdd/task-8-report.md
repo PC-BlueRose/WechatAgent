@@ -82,3 +82,44 @@ Final result:
 
 - `handle_scheduled_task(...)` currently computes a policy decision but does not branch on `decision.allowed`; it always generates a message. This matches the provided task brief and test, but future channel or scheduler integration may need an explicit suppression path for disallowed tasks.
 - Only the focused Task 8 test file was run, per the brief's TDD flow. Full regression coverage across the broader suite was not run in this task.
+
+## Fix Round 1
+
+### Reviewer Findings Addressed
+
+- Reminder extraction now persists a `USER_REMINDER` scheduled task through `SchedulerService.create_user_reminder(...)`.
+- `handle_scheduled_task(...)` now enforces `decision.allowed`. Disallowed routine check-ins return a suppressed `OutgoingMessage`, do not call the normal scheduled prompt path, and do not mark the task as `sent`.
+- The existing happy-path test where an unsaved scheduled task is passed directly into `handle_scheduled_task(...)` still passes.
+
+### Reminder Scheduling Assumption
+
+- The current fake extraction output uses `time_text: "tomorrow morning"`.
+- For that value, the orchestrator deterministically maps the reminder trigger time to `08:00` on the next calendar day in the message timestamp's timezone.
+- Other time expressions still fall back to the message timestamp because broad time parsing is outside Task 8 scope.
+
+### Tests Re-Run
+
+Exact command:
+
+```powershell
+py -3.14 -m pytest tests\agent\test_orchestrator.py -v
+```
+
+Output summary:
+
+- `5 passed in 0.20s`
+
+Tests covering the fix:
+
+- `test_reminder_message_schedules_user_reminder_task`
+  - Verifies reminder extraction creates a persisted `USER_REMINDER` task with the expected trigger time, payload, and source message id.
+- `test_quiet_mode_suppresses_routine_scheduled_checkin`
+  - Verifies quiet mode suppresses a routine scheduled check-in and leaves the task in `PENDING`.
+- `test_scheduled_morning_checkin_generates_natural_message`
+  - Continues to verify the happy path where an unsaved scheduled task is handled directly and still produces a natural outbound message.
+
+### Additional Self-Review
+
+- The fix remains scoped to the owned Task 8 files only.
+- The orchestrator stays channel-independent and continues delegating persistence, policy, memory, and scheduling to existing services.
+- Suppression currently returns an empty-content `OutgoingMessage` with suppression metadata because the interface contract still requires an `OutgoingMessage` return value.

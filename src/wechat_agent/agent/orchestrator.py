@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, time, timedelta
 from uuid import uuid4
 
 from wechat_agent.domain.events import LifeEvent, LifeEventType
@@ -62,9 +62,21 @@ class AgentOrchestrator:
             )
 
         events = self._memory.extract_and_store(message)
+        reminder_events = [
+            event for event in events if event.event_type is LifeEventType.REMINDER
+        ]
+        for event in reminder_events:
+            self._scheduler.create_user_reminder(
+                user_id=message.user_id,
+                conversation_id=message.conversation_id,
+                channel=message.channel,
+                trigger_at=self._resolve_reminder_trigger_at(message.timestamp, event),
+                content=str(event.payload.get("content", message.content or "")),
+                source_message_id=message.message_id,
+            )
         intent = (
             "reminder_confirmation"
-            if any(event.event_type is LifeEventType.REMINDER for event in events)
+            if reminder_events
             else "chat"
         )
         response = self._llm.chat(
@@ -94,6 +106,19 @@ class AgentOrchestrator:
         self, task: ScheduledTask, now: datetime
     ) -> OutgoingMessage:
         decision = self._policy.evaluate_checkin(task.user_id, task.task_type, now)
+        if not decision.allowed:
+            return OutgoingMessage(
+                conversation_id=task.conversation_id,
+                channel=task.channel,
+                content="",
+                metadata={
+                    "task_id": task.task_id,
+                    "intent": task.task_type.value,
+                    "suppressed": True,
+                    "reason": decision.reason,
+                },
+            )
+
         response = self._llm.chat(
             ChatRequest(
                 user_id=task.user_id,
@@ -118,3 +143,17 @@ class AgentOrchestrator:
             content=response.content,
             metadata={"task_id": task.task_id, "intent": task.task_type.value},
         )
+
+    @staticmethod
+    def _resolve_reminder_trigger_at(
+        message_timestamp: datetime, event: LifeEvent
+    ) -> datetime:
+        time_text = str(event.payload.get("time_text", "")).strip().lower()
+        tzinfo = message_timestamp.tzinfo or UTC
+        if time_text == "tomorrow morning":
+            return datetime.combine(
+                message_timestamp.date() + timedelta(days=1),
+                time(8, 0),
+                tzinfo=tzinfo,
+            )
+        return message_timestamp
