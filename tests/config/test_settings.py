@@ -40,6 +40,16 @@ def test_load_settings_reads_minimax_models(monkeypatch):
     assert settings.minimax.use_fake_vision_fallback is False
 
 
+def test_load_settings_fake_provider_ignores_invalid_minimax_timeout(monkeypatch):
+    monkeypatch.setenv("WECHAT_AGENT_LLM_PROVIDER", "fake")
+    monkeypatch.setenv("WECHAT_AGENT_MINIMAX_TIMEOUT_SECONDS", "not-an-int")
+
+    settings = load_settings()
+
+    assert settings.llm_provider == "fake"
+    assert settings.minimax.timeout_seconds == 30
+
+
 def test_load_settings_rejects_unknown_provider(monkeypatch):
     monkeypatch.setenv("WECHAT_AGENT_LLM_PROVIDER", "other")
 

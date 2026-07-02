@@ -37,7 +37,20 @@ def test_format_state_counts_tasks_by_status():
     assert "Tasks: pending=1, sent=1" in output
 
 
-def test_build_cli_session_uses_fake_gateway_by_default():
+def test_build_cli_session_uses_fake_gateway_by_default(monkeypatch):
+    for name in (
+        "WECHAT_AGENT_LLM_PROVIDER",
+        "WECHAT_AGENT_MINIMAX_API_KEY",
+        "WECHAT_AGENT_MINIMAX_BASE_URL",
+        "WECHAT_AGENT_MINIMAX_CHAT_MODEL",
+        "WECHAT_AGENT_MINIMAX_EXTRACTION_MODEL",
+        "WECHAT_AGENT_MINIMAX_EMBEDDING_MODEL",
+        "WECHAT_AGENT_MINIMAX_VISION_MODEL",
+        "WECHAT_AGENT_MINIMAX_TIMEOUT_SECONDS",
+        "WECHAT_AGENT_MINIMAX_USE_FAKE_VISION_FALLBACK",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
     session = build_cli_session()
 
     assert session.orchestrator._llm.__class__.__name__ == "FakeLLMGateway"

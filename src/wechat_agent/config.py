@@ -37,6 +37,21 @@ def load_settings() -> AppSettings:
     if provider_raw not in {"fake", "minimax"}:
         raise ValueError(f"Unsupported LLM provider: {provider_raw}")
 
+    if provider_raw == "fake":
+        return AppSettings(
+            llm_provider="fake",
+            minimax=MiniMaxSettings(
+                api_key=None,
+                base_url="https://api.minimax.io/v1",
+                chat_model="MiniMax-M3",
+                extraction_model="MiniMax-M3",
+                embedding_model="MiniMax-Embedding-01",
+                vision_model=None,
+                timeout_seconds=30,
+                use_fake_vision_fallback=True,
+            ),
+        )
+
     minimax = MiniMaxSettings(
         api_key=os.getenv("WECHAT_AGENT_MINIMAX_API_KEY"),
         base_url=os.getenv("WECHAT_AGENT_MINIMAX_BASE_URL", "https://api.minimax.io/v1"),
