@@ -17,6 +17,25 @@ def test_run_cli_once_routes_plain_text_to_agent_reply():
     assert "Take your time" in output
 
 
+def test_run_cli_once_preserves_plain_text_whitespace_for_agent():
+    class StubSession:
+        def __init__(self) -> None:
+            self.received: list[tuple[str, datetime | None]] = []
+
+        def handle_text(self, text: str, now: datetime | None = None) -> str:
+            self.received.append((text, now))
+            return "ok"
+
+    session = StubSession()
+    timestamp = datetime(2026, 7, 2, 8, 0, tzinfo=UTC)
+
+    output, should_exit = run_cli_once(session, "  hello there  ", now=timestamp)
+
+    assert should_exit is False
+    assert output == "ok"
+    assert session.received == [("  hello there  ", timestamp)]
+
+
 def test_run_cli_once_routes_slash_command_through_command_engine():
     session = build_cli_session()
 

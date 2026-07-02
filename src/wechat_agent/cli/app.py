@@ -14,7 +14,7 @@ def run_cli_once(
     if normalized_input.startswith("/"):
         result = run_command(session, normalized_input, now=timestamp)
         return result.output, result.exit_requested
-    return session.handle_text(normalized_input, now=timestamp), False
+    return session.handle_text(user_input, now=timestamp), False
 
 
 def main() -> int:
@@ -35,7 +35,7 @@ def main() -> int:
             continue
 
         try:
-            output, should_exit = run_cli_once(session, normalized_input)
+            output, should_exit = run_cli_once(session, user_input)
         except Exception as exc:  # pragma: no cover - interactive safety net
             print(f"Agent error: {exc}")
             continue

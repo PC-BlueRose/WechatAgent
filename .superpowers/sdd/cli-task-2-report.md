@@ -136,3 +136,46 @@ tests/cli/test_app.py::test_main_does_not_prefix_whitespace_padded_slash_command
 ### Self-review
 
 - This keeps the CLI adapter thin and removes the last mismatch between command dispatch and command rendering in `main()`
+
+## Post-final Fix Round
+
+### Findings addressed
+
+1. `pyproject.toml` now lands in the Task 2 commit set with the required `[project.scripts]` entry for `wechat-agent-cli`.
+2. `run_cli_once()` still normalizes enough to detect whitespace-padded slash commands, but now preserves raw plain-text chat payloads when routing to `session.handle_text(...)`.
+
+### Changes
+
+- Kept `[project.scripts]` in `pyproject.toml` so `wechat-agent-cli = "wechat_agent.cli.app:main"` is part of the committed Task 2 changes
+- Updated `src/wechat_agent/cli/app.py` so `run_cli_once()` dispatches commands from a stripped copy while passing original plain text through unchanged
+- Updated `main()` to continue using normalized input only for blank-line detection and prefix selection, while passing the original user input into `run_cli_once()`
+- Added a focused regression test proving plain-text whitespace is preserved for the agent
+- Kept the whitespace-padded slash-command regression coverage
+
+### Verification
+
+Command:
+
+```powershell
+py -3.14 -m pytest tests/cli/test_app.py -v
+```
+
+Result:
+
+```text
+collected 8 items
+tests/cli/test_app.py::test_run_cli_once_routes_plain_text_to_agent_reply PASSED
+tests/cli/test_app.py::test_run_cli_once_preserves_plain_text_whitespace_for_agent PASSED
+tests/cli/test_app.py::test_run_cli_once_routes_slash_command_through_command_engine PASSED
+tests/cli/test_app.py::test_run_cli_once_marks_exit_command PASSED
+tests/cli/test_app.py::test_run_cli_once_normalizes_whitespace_before_command_routing PASSED
+tests/cli/test_app.py::test_main_prints_startup_banner_and_exits_on_eof PASSED
+tests/cli/test_app.py::test_main_skips_blank_lines_and_prefixes_agent_output PASSED
+tests/cli/test_app.py::test_main_does_not_prefix_whitespace_padded_slash_command_output PASSED
+8 passed in 0.13s
+```
+
+### Self-review
+
+- The CLI stays thin: normalization is only used where the REPL needs it for blank lines and command detection
+- Plain-text payload preservation is now explicit and regression-tested
