@@ -87,8 +87,9 @@ class CliSession:
                 outputs.append(reply.content)
         return outputs
 
-    def format_state(self) -> str:
-        mode = self.policy.get_effective_mode(self.user_id, datetime.now(UTC)).value
+    def format_state(self, now: datetime | None = None) -> str:
+        timestamp = now or datetime.now(UTC)
+        mode = self.policy.get_effective_mode(self.user_id, timestamp).value
         recent_events = self.store.life_events.list_for_user(self.user_id)[-5:]
         active_memories = self.store.memories.list_active(self.user_id)
         task_counts = self.store.tasks.status_counts(self.user_id)

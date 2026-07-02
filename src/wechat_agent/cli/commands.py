@@ -39,7 +39,7 @@ def run_command(
     if command == "/exit":
         return CommandResult(output="Bye.", exit_requested=True)
     if command == "/state":
-        return CommandResult(output=session.format_state())
+        return CommandResult(output=session.format_state(now=timestamp))
     if command == "/mode":
         if len(parts) != 2 or parts[1] not in {"quiet", "daily", "coach"}:
             return CommandResult(output="Usage: /mode quiet|daily|coach")

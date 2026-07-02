@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 from wechat_agent.cli.commands import run_command
 from wechat_agent.cli.session import build_cli_session
-from wechat_agent.domain.modes import AgentMode
+from wechat_agent.domain.modes import AgentMode, ModeConfig
 from wechat_agent.domain.tasks import TaskStatus
 
 
@@ -59,6 +59,26 @@ def test_state_command_returns_compact_summary():
     assert "Active memories:" in result.output
     assert "Recent events:" in result.output
     assert "sleep @" in result.output
+
+
+def test_state_command_uses_simulated_now_for_mode_resolution():
+    session = build_cli_session()
+    session.store.modes.save(
+        ModeConfig(
+            user_id=session.user_id,
+            mode=AgentMode.COACH,
+            started_at=datetime(2019, 1, 1, 9, 0, tzinfo=UTC),
+            expires_at=datetime(2020, 1, 1, 0, 0, tzinfo=UTC),
+            do_not_disturb_windows=[],
+            daily_checkin_windows={},
+            tone_preferences={},
+            memory_strategy="cli_manual",
+        )
+    )
+
+    result = run_command(session, "/state", now=datetime(2019, 12, 31, 23, 59, tzinfo=UTC))
+
+    assert "Mode: coach" in result.output
 
 
 def test_unknown_command_returns_help_hint():
