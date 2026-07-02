@@ -62,6 +62,20 @@ def test_run_cli_once_marks_exit_command():
     assert output == "Bye."
 
 
+def test_run_cli_once_returns_state_summary_for_state_command():
+    session = build_cli_session()
+
+    output, should_exit = run_cli_once(
+        session,
+        "/state",
+        now=datetime(2026, 7, 2, 8, 3, tzinfo=UTC),
+    )
+
+    assert should_exit is False
+    assert "Mode: daily" in output
+    assert "Recent events:" in output
+
+
 def test_run_cli_once_normalizes_whitespace_before_command_routing():
     session = build_cli_session()
 
