@@ -1,6 +1,7 @@
+import sys
 from datetime import UTC, datetime
 
-from wechat_agent.cli.app import main, run_cli_once
+from wechat_agent.cli.app import _configure_console_output, main, run_cli_once
 from wechat_agent.cli.session import build_cli_session
 
 
@@ -131,3 +132,24 @@ def test_main_does_not_prefix_whitespace_padded_slash_command_output(
     assert exit_code == 0
     assert "Mode set to quiet." in captured.out
     assert "Agent: Mode set to quiet." not in captured.out
+
+
+def test_configure_console_output_reconfigures_stdout_and_stderr(monkeypatch):
+    calls: list[tuple[str, dict[str, str]]] = []
+
+    class StubStream:
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+        def reconfigure(self, **kwargs: str) -> None:
+            calls.append((self.name, kwargs))
+
+    monkeypatch.setattr(sys, "stdout", StubStream("stdout"))
+    monkeypatch.setattr(sys, "stderr", StubStream("stderr"))
+
+    _configure_console_output()
+
+    assert calls == [
+        ("stdout", {"errors": "replace"}),
+        ("stderr", {"errors": "replace"}),
+    ]

@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from wechat_agent.domain.tasks import ScheduledTask, TaskStatus, TaskType
 from wechat_agent.policy.engine import PolicyEngine
-from wechat_agent.storage.in_memory import InMemoryStore
+from wechat_agent.storage.store import Store
 
 
 DAILY_CHECKINS: list[tuple[TaskType, time, dict[str, str]]] = [
@@ -22,7 +22,7 @@ DAILY_CHECKINS: list[tuple[TaskType, time, dict[str, str]]] = [
 
 
 class SchedulerService:
-    def __init__(self, store: InMemoryStore, policy: PolicyEngine) -> None:
+    def __init__(self, store: Store, policy: PolicyEngine) -> None:
         self._store = store
         self._policy = policy
 

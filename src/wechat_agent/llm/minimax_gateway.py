@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import re
-from urllib import request
+from urllib import error, request
 
 from wechat_agent.config import MiniMaxSettings
 from wechat_agent.llm.fake_gateway import FakeLLMGateway
@@ -52,7 +52,6 @@ class MiniMaxLLMGateway:
                     ),
                 },
             ],
-            "thinking": {"reasoning_split": True},
         }
         data = self._post_json("/chat/completions", payload)
         content = self._extract_message_content(data)
@@ -87,7 +86,6 @@ class MiniMaxLLMGateway:
                     ),
                 },
             ],
-            "thinking": {"reasoning_split": True},
         }
         try:
             data = self._post_json("/chat/completions", payload)
@@ -148,8 +146,14 @@ class MiniMaxLLMGateway:
             },
             method="POST",
         )
-        with request.urlopen(req, timeout=self._settings.timeout_seconds) as response:
-            return json.loads(response.read().decode("utf-8"))
+        try:
+            with request.urlopen(req, timeout=self._settings.timeout_seconds) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except error.HTTPError as exc:
+            details = exc.read().decode("utf-8", errors="replace").strip()
+            if details:
+                raise RuntimeError(f"MiniMax API error {exc.code}: {details}") from exc
+            raise RuntimeError(f"MiniMax API error {exc.code}: {exc.reason}") from exc
 
     def _extract_message_content(self, data: dict) -> str:
         message = data["choices"][0]["message"]

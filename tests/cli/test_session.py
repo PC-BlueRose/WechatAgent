@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from pathlib import Path
 
 from wechat_agent.llm.minimax_gateway import MiniMaxLLMGateway
 from wechat_agent.cli.session import build_cli_session
@@ -38,27 +39,31 @@ def test_format_state_counts_tasks_by_status():
 
 
 def test_build_cli_session_uses_fake_gateway_by_default(monkeypatch):
-    for name in (
-        "WECHAT_AGENT_LLM_PROVIDER",
-        "WECHAT_AGENT_MINIMAX_API_KEY",
-        "WECHAT_AGENT_MINIMAX_BASE_URL",
-        "WECHAT_AGENT_MINIMAX_CHAT_MODEL",
-        "WECHAT_AGENT_MINIMAX_EXTRACTION_MODEL",
-        "WECHAT_AGENT_MINIMAX_EMBEDDING_MODEL",
-        "WECHAT_AGENT_MINIMAX_VISION_MODEL",
-        "WECHAT_AGENT_MINIMAX_TIMEOUT_SECONDS",
-        "WECHAT_AGENT_MINIMAX_USE_FAKE_VISION_FALLBACK",
-    ):
-        monkeypatch.delenv(name, raising=False)
-
     session = build_cli_session()
 
     assert session.orchestrator._llm.__class__.__name__ == "FakeLLMGateway"
 
 
-def test_build_cli_session_uses_minimax_gateway_when_configured(monkeypatch):
-    monkeypatch.setenv("WECHAT_AGENT_LLM_PROVIDER", "minimax")
-    monkeypatch.setenv("WECHAT_AGENT_MINIMAX_API_KEY", "test-key")
+def test_build_cli_session_uses_minimax_gateway_when_configured():
+    Path(".env").write_text(
+        "\n".join(
+            [
+                "WECHAT_AGENT_LLM_PROVIDER=minimax",
+                "WECHAT_AGENT_MINIMAX_API_KEY=test-key",
+                "WECHAT_AGENT_MINIMAX_BASE_URL=https://api.minimax.io/v1",
+                "WECHAT_AGENT_MINIMAX_CHAT_MODEL=chat-model",
+                "WECHAT_AGENT_MINIMAX_EXTRACTION_MODEL=extract-model",
+                "WECHAT_AGENT_MINIMAX_EMBEDDING_MODEL=embed-model",
+                "WECHAT_AGENT_STORAGE_BACKEND=inmemory",
+                "WECHAT_AGENT_DB_HOST=127.0.0.1",
+                "WECHAT_AGENT_DB_PORT=5432",
+                "WECHAT_AGENT_DB_NAME=wechat_agent",
+                "WECHAT_AGENT_DB_USER=postgres",
+                "WECHAT_AGENT_DB_PASSWORD=",
+            ]
+        ),
+        encoding="utf-8",
+    )
 
     session = build_cli_session()
 

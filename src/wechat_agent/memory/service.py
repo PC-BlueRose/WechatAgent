@@ -7,11 +7,11 @@ from wechat_agent.domain.events import LifeEvent, LifeEventType
 from wechat_agent.domain.memory import LongTermMemory, MemoryState
 from wechat_agent.domain.messages import MessageType, NormalizedMessage
 from wechat_agent.llm.gateway import LLMGateway
-from wechat_agent.storage.in_memory import InMemoryStore
+from wechat_agent.storage.store import Store
 
 
 class MemoryService:
-    def __init__(self, store: InMemoryStore, llm: LLMGateway) -> None:
+    def __init__(self, store: Store, llm: LLMGateway) -> None:
         self._store = store
         self._llm = llm
 

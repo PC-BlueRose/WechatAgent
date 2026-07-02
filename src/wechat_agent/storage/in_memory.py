@@ -8,6 +8,7 @@ from wechat_agent.domain.memory import LongTermMemory, MemoryState
 from wechat_agent.domain.messages import NormalizedMessage
 from wechat_agent.domain.modes import ModeConfig
 from wechat_agent.domain.tasks import ScheduledTask, TaskStatus
+from wechat_agent.storage.store import Store
 
 
 class InMemoryMessageRepository:
@@ -104,7 +105,7 @@ class InMemoryTaskRepository:
 
 
 @dataclass
-class InMemoryStore:
+class InMemoryStore(Store):
     messages: InMemoryMessageRepository = field(default_factory=InMemoryMessageRepository)
     life_events: InMemoryLifeEventRepository = field(default_factory=InMemoryLifeEventRepository)
     memories: InMemoryMemoryRepository = field(default_factory=InMemoryMemoryRepository)

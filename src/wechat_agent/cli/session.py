@@ -13,7 +13,8 @@ from wechat_agent.llm.minimax_gateway import MiniMaxLLMGateway
 from wechat_agent.memory.service import MemoryService
 from wechat_agent.policy.engine import PolicyEngine
 from wechat_agent.scheduler.service import SchedulerService
-from wechat_agent.storage.in_memory import InMemoryStore
+from wechat_agent.storage.factory import build_store
+from wechat_agent.storage.store import Store
 
 
 CHECKIN_TASKS: dict[str, TaskType] = {
@@ -40,7 +41,7 @@ def _build_llm() -> FakeLLMGateway | MiniMaxLLMGateway:
 
 @dataclass
 class CliSession:
-    store: InMemoryStore
+    store: Store
     orchestrator: AgentOrchestrator
     scheduler: SchedulerService
     policy: PolicyEngine
@@ -137,7 +138,8 @@ class CliSession:
 
 
 def build_cli_session() -> CliSession:
-    store = InMemoryStore()
+    settings = load_settings()
+    store = build_store(settings.database)
     llm = _build_llm()
     policy = PolicyEngine(store.modes)
     memory = MemoryService(store=store, llm=llm)

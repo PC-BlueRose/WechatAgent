@@ -17,21 +17,32 @@ The first runnable channel is `TestChannelAdapter`; direct personal WeChat integ
 
 ## Runtime Baselines
 
-- Python 3.12.10
+- Python 3.14.5
 - PostgreSQL 16
 
 ## Development
 
+## Local Config
+
+Create a local config file before starting the CLI:
+
+```bash
+cp .env.example .env
+```
+
+Fill in `.env` with your local MiniMax and database settings. The local app reads `.env` as its only local configuration source.
+
 Install in editable mode:
 
 ```bash
-pip install -e ".[dev]"
+conda run -n WechatAgent pip install -r requirements.txt
+conda run -n WechatAgent pip install -e . --no-deps
 ```
 
 Run tests:
 
 ```bash
-python -m pytest -v
+conda run -n WechatAgent python -m pytest -v
 ```
 
 ## CLI
@@ -39,7 +50,13 @@ python -m pytest -v
 Start the local CLI:
 
 ```bash
-wechat-agent-cli
+conda run -n WechatAgent wechat-agent-cli
+```
+
+Or use the project root launcher that first validates `.env` and then starts the CLI:
+
+```bash
+conda run -n WechatAgent python test_run.py
 ```
 
 Type any plain-text message at the prompt to chat with the Agent through the in-memory test harness.

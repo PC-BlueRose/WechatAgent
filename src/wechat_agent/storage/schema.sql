@@ -1,6 +1,4 @@
-CREATE EXTENSION IF NOT EXISTS vector;
-
-CREATE TABLE raw_messages (
+CREATE TABLE IF NOT EXISTS raw_messages (
   message_id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   conversation_id TEXT NOT NULL,
@@ -14,7 +12,7 @@ CREATE TABLE raw_messages (
   processing_status TEXT NOT NULL DEFAULT 'new'
 );
 
-CREATE TABLE life_events (
+CREATE TABLE IF NOT EXISTS life_events (
   event_id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   event_type TEXT NOT NULL,
@@ -27,7 +25,7 @@ CREATE TABLE life_events (
   confirmation_status TEXT NOT NULL
 );
 
-CREATE TABLE long_term_memories (
+CREATE TABLE IF NOT EXISTS long_term_memories (
   memory_id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   category TEXT NOT NULL,
@@ -38,10 +36,10 @@ CREATE TABLE long_term_memories (
   created_at TIMESTAMPTZ NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL,
   state TEXT NOT NULL,
-  embedding vector(1536)
+  embedding JSONB
 );
 
-CREATE TABLE scheduled_tasks (
+CREATE TABLE IF NOT EXISTS scheduled_tasks (
   task_id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   conversation_id TEXT NOT NULL,
@@ -53,7 +51,7 @@ CREATE TABLE scheduled_tasks (
   source_message_id TEXT REFERENCES raw_messages(message_id)
 );
 
-CREATE TABLE mode_configs (
+CREATE TABLE IF NOT EXISTS mode_configs (
   user_id TEXT PRIMARY KEY,
   mode TEXT NOT NULL,
   started_at TIMESTAMPTZ NOT NULL,

@@ -1,7 +1,7 @@
 import json
 from dataclasses import replace
 from unittest.mock import patch
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 
 from wechat_agent.config import MiniMaxSettings
 from wechat_agent.llm.fake_gateway import FakeLLMGateway
@@ -68,7 +68,7 @@ def test_chat_uses_chat_model_and_returns_text():
     assert response.content == "I am here. Take your time."
     assert gateway.requests[0]["path"] == "/chat/completions"
     assert gateway.requests[0]["payload"]["model"] == "chat-model"
-    assert gateway.requests[0]["payload"]["thinking"] == {"reasoning_split": True}
+    assert "thinking" not in gateway.requests[0]["payload"]
 
 
 def test_chat_strips_inline_thinking_content():
@@ -138,7 +138,7 @@ def test_extract_life_events_parses_json_payload():
     assert result.events[0].payload["sleep_time"] == "02:00"
     assert gateway.requests[0]["path"] == "/chat/completions"
     assert gateway.requests[0]["payload"]["model"] == "extract-model"
-    assert gateway.requests[0]["payload"]["thinking"] == {"reasoning_split": True}
+    assert "thinking" not in gateway.requests[0]["payload"]
 
 
 def test_extract_life_events_parses_json_payload_when_thinking_is_inlined():
@@ -314,3 +314,32 @@ def test_post_json_joins_base_url_when_configured_with_trailing_slash():
 
     request_arg = mock_urlopen.call_args.args[0]
     assert request_arg.full_url == "https://api.minimax.io/v1/chat/completions"
+
+
+def test_post_json_surfaces_http_error_details():
+    gateway = MiniMaxLLMGateway(
+        settings=build_settings(),
+        fallback=FakeLLMGateway(),
+    )
+    http_error = HTTPError(
+        url="https://api.minimax.io/v1/chat/completions",
+        code=400,
+        msg="Bad Request",
+        hdrs=None,
+        fp=None,
+    )
+    http_error.read = lambda: (
+        b'{"error":{"message":"invalid params","http_code":"400"}}'
+    )
+
+    with patch(
+        "wechat_agent.llm.minimax_gateway.request.urlopen",
+        side_effect=http_error,
+    ):
+        try:
+            gateway._post_json("/chat/completions", {"model": "chat-model"})
+        except RuntimeError as exc:
+            assert "MiniMax API error 400" in str(exc)
+            assert "invalid params" in str(exc)
+        else:  # pragma: no cover - defensive failure path
+            raise AssertionError("Expected RuntimeError")

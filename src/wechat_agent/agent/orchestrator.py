@@ -10,13 +10,13 @@ from wechat_agent.llm.gateway import ChatRequest, LLMGateway
 from wechat_agent.memory.service import MemoryService
 from wechat_agent.policy.engine import PolicyEngine
 from wechat_agent.scheduler.service import SchedulerService
-from wechat_agent.storage.in_memory import InMemoryStore
+from wechat_agent.storage.store import Store
 
 
 class AgentOrchestrator:
     def __init__(
         self,
-        store: InMemoryStore,
+        store: Store,
         llm: LLMGateway,
         memory: MemoryService,
         scheduler: SchedulerService,
