@@ -99,3 +99,40 @@ tests/cli/test_app.py::test_main_skips_blank_lines_and_prefixes_agent_output PAS
 
 - The CLI adapter remains thin; normalization stays inside `run_cli_once()` and `main()` behavior is unchanged except for the whitespace fix reaching helper callers too
 - The new tests target user-visible REPL behavior without trying to exhaustively script every branch of the loop
+
+## Final Fix Before Review
+
+### Finding addressed
+
+- `main()` now uses the same normalized command detection for output prefixing that `run_cli_once()` already uses for dispatch.
+
+### Changes
+
+- Updated `src/wechat_agent/cli/app.py` so `main()` strips once, skips blank input from the normalized value, passes normalized input into `run_cli_once()`, and decides the `Agent: ` prefix from that same normalized string
+- Added a focused REPL regression test proving `"  /mode quiet  "` prints `Mode set to quiet.` without the `Agent: ` prefix
+
+### Verification
+
+Command:
+
+```powershell
+py -3.14 -m pytest tests/cli/test_app.py -v
+```
+
+Result:
+
+```text
+collected 7 items
+tests/cli/test_app.py::test_run_cli_once_routes_plain_text_to_agent_reply PASSED
+tests/cli/test_app.py::test_run_cli_once_routes_slash_command_through_command_engine PASSED
+tests/cli/test_app.py::test_run_cli_once_marks_exit_command PASSED
+tests/cli/test_app.py::test_run_cli_once_normalizes_whitespace_before_command_routing PASSED
+tests/cli/test_app.py::test_main_prints_startup_banner_and_exits_on_eof PASSED
+tests/cli/test_app.py::test_main_skips_blank_lines_and_prefixes_agent_output PASSED
+tests/cli/test_app.py::test_main_does_not_prefix_whitespace_padded_slash_command_output PASSED
+7 passed in 0.15s
+```
+
+### Self-review
+
+- This keeps the CLI adapter thin and removes the last mismatch between command dispatch and command rendering in `main()`

@@ -81,3 +81,20 @@ def test_main_skips_blank_lines_and_prefixes_agent_output(monkeypatch, capsys):
     assert "Agent: " in captured.out
     assert "Take your time" in captured.out
     assert captured.out.rstrip().endswith("Bye.")
+
+
+def test_main_does_not_prefix_whitespace_padded_slash_command_output(
+    monkeypatch, capsys
+):
+    session = build_cli_session()
+    inputs = iter(["  /mode quiet  ", "/exit"])
+
+    monkeypatch.setattr("wechat_agent.cli.app.build_cli_session", lambda: session)
+    monkeypatch.setattr("builtins.input", lambda _prompt: next(inputs))
+
+    exit_code = main()
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "Mode set to quiet." in captured.out
+    assert "Agent: Mode set to quiet." not in captured.out

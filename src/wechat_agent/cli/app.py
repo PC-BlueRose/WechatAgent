@@ -22,7 +22,7 @@ def main() -> int:
     print("WechatAgent CLI ready. Use /help for commands.")
     while True:
         try:
-            user_input = input("> ").strip()
+            user_input = input("> ")
         except EOFError:
             print("Bye.")
             return 0
@@ -30,17 +30,18 @@ def main() -> int:
             print("\nBye.")
             return 0
 
-        if not user_input:
+        normalized_input = user_input.strip()
+        if not normalized_input:
             continue
 
         try:
-            output, should_exit = run_cli_once(session, user_input)
+            output, should_exit = run_cli_once(session, normalized_input)
         except Exception as exc:  # pragma: no cover - interactive safety net
             print(f"Agent error: {exc}")
             continue
 
         if output:
-            prefix = "Agent: " if not user_input.startswith("/") else ""
+            prefix = "Agent: " if not normalized_input.startswith("/") else ""
             print(f"{prefix}{output}")
 
         if should_exit:
