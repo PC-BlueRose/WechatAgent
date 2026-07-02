@@ -51,7 +51,7 @@ The CLI defaults to the deterministic fake gateway. To run against MiniMax, set:
 ```bash
 WECHAT_AGENT_LLM_PROVIDER=minimax
 WECHAT_AGENT_MINIMAX_API_KEY=your-key
-WECHAT_AGENT_MINIMAX_BASE_URL=https://api.minimaxi.com/v1
+WECHAT_AGENT_MINIMAX_BASE_URL=https://api.minimax.io/v1
 WECHAT_AGENT_MINIMAX_CHAT_MODEL=MiniMax-M3
 WECHAT_AGENT_MINIMAX_EXTRACTION_MODEL=MiniMax-M3
 WECHAT_AGENT_MINIMAX_EMBEDDING_MODEL=MiniMax-Embedding-01

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from urllib import request
 
 from wechat_agent.config import MiniMaxSettings
@@ -16,6 +17,8 @@ from wechat_agent.llm.gateway import (
 
 
 class MiniMaxLLMGateway:
+    _THINKING_BLOCK_RE = re.compile(r"<think>.*?</think>\s*", re.DOTALL)
+
     def __init__(
         self, settings: MiniMaxSettings, fallback: FakeLLMGateway | None = None
     ) -> None:
@@ -49,9 +52,10 @@ class MiniMaxLLMGateway:
                     ),
                 },
             ],
+            "thinking": {"reasoning_split": True},
         }
         data = self._post_json("/chat/completions", payload)
-        content = str(data["choices"][0]["message"]["content"])
+        content = self._extract_message_content(data)
         return ChatResponse(content=content)
 
     def extract_life_events(
@@ -83,10 +87,11 @@ class MiniMaxLLMGateway:
                     ),
                 },
             ],
+            "thinking": {"reasoning_split": True},
         }
         try:
             data = self._post_json("/chat/completions", payload)
-            raw = str(data["choices"][0]["message"]["content"])
+            raw = self._extract_message_content(data)
             parsed = json.loads(raw)
             events = [
                 ExtractedEvent(
@@ -145,3 +150,10 @@ class MiniMaxLLMGateway:
         )
         with request.urlopen(req, timeout=self._settings.timeout_seconds) as response:
             return json.loads(response.read().decode("utf-8"))
+
+    def _extract_message_content(self, data: dict) -> str:
+        message = data["choices"][0]["message"]
+        return self._strip_thinking_content(str(message["content"]))
+
+    def _strip_thinking_content(self, content: str) -> str:
+        return self._THINKING_BLOCK_RE.sub("", content).strip()
