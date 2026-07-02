@@ -102,3 +102,39 @@ Result:
 ### Follow-up Commit
 
 - Created after the passing required test run.
+
+## 2026-07-02 Important Findings Fix
+
+### Fix Summary
+
+- Removed CLI-side due reminder text rewriting so `/due now` preserves the orchestrator reminder text exactly.
+- Replaced CLI state formatting's direct access to `self.store.tasks._tasks` with a repository-level `status_counts(user_id)` contract on the task repository.
+- Added storage coverage for the new task status summary boundary.
+
+### Exact Commands And Results
+
+Command:
+
+```powershell
+py -3.14 -m pytest tests/cli/test_commands.py -v
+```
+
+Result:
+
+- PASS
+- `5 passed in 0.13s`
+
+Command:
+
+```powershell
+py -3.14 -m pytest tests/storage/test_in_memory.py -v
+```
+
+Result:
+
+- PASS
+- `4 passed in 0.12s`
+
+### Fix Commit
+
+- Created after the passing test runs in this section.

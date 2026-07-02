@@ -80,3 +80,48 @@ def test_in_memory_store_gets_memory_by_memory_id():
 
     assert store.memories.get("mem-1") == memory
     assert store.memories.get("missing-memory") is None
+
+
+def test_in_memory_store_counts_task_statuses_by_user():
+    store = InMemoryStore()
+    store.tasks.save(
+        ScheduledTask(
+            task_id="task-1",
+            user_id="user-1",
+            conversation_id="conv-1",
+            channel="test",
+            task_type=TaskType.USER_REMINDER,
+            status=TaskStatus.PENDING,
+            trigger_at=datetime(2026, 7, 1, 9, 30, tzinfo=UTC),
+            payload={},
+            source_message_id=None,
+        )
+    )
+    store.tasks.save(
+        ScheduledTask(
+            task_id="task-2",
+            user_id="user-1",
+            conversation_id="conv-1",
+            channel="test",
+            task_type=TaskType.MORNING_CHECKIN,
+            status=TaskStatus.SENT,
+            trigger_at=datetime(2026, 7, 1, 10, 30, tzinfo=UTC),
+            payload={},
+            source_message_id=None,
+        )
+    )
+    store.tasks.save(
+        ScheduledTask(
+            task_id="task-3",
+            user_id="user-2",
+            conversation_id="conv-2",
+            channel="test",
+            task_type=TaskType.USER_REMINDER,
+            status=TaskStatus.PENDING,
+            trigger_at=datetime(2026, 7, 1, 11, 30, tzinfo=UTC),
+            payload={},
+            source_message_id=None,
+        )
+    )
+
+    assert store.tasks.status_counts("user-1") == {"pending": 1, "sent": 1}

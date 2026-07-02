@@ -84,16 +84,14 @@ class CliSession:
             reply = self.orchestrator.handle_scheduled_task(task, now=timestamp)
             if reply.content:
                 self.channel.send(reply)
-                outputs.append(self._format_due_output(task, reply.content))
+                outputs.append(reply.content)
         return outputs
 
     def format_state(self) -> str:
         mode = self.policy.get_effective_mode(self.user_id, datetime.now(UTC)).value
         recent_events = self.store.life_events.list_for_user(self.user_id)[-5:]
         active_memories = self.store.memories.list_active(self.user_id)
-        task_counts: dict[str, int] = {}
-        for task in self.store.tasks._tasks.values():
-            task_counts[task.status.value] = task_counts.get(task.status.value, 0) + 1
+        task_counts = self.store.tasks.status_counts(self.user_id)
 
         if recent_events:
             event_lines = [
@@ -115,20 +113,6 @@ class CliSession:
                 *event_lines,
             ]
         )
-
-    @staticmethod
-    def _format_due_output(task: ScheduledTask, content: str) -> str:
-        if task.task_type is not TaskType.USER_REMINDER:
-            return content
-
-        normalized = content.strip()
-        lowered = normalized.lower()
-        prefix = "remind me "
-        marker = " to "
-        if lowered.startswith(prefix) and marker in lowered:
-            marker_index = lowered.rfind(marker)
-            return normalized[marker_index + len(marker) :].strip()
-        return normalized
 
 
 def build_cli_session() -> CliSession:

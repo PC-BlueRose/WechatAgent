@@ -90,6 +90,14 @@ class InMemoryTaskRepository:
             and task.trigger_at <= now
         ]
 
+    def status_counts(self, user_id: str) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for task in self._tasks.values():
+            if task.user_id != user_id:
+                continue
+            counts[task.status.value] = counts.get(task.status.value, 0) + 1
+        return counts
+
     def update_status(self, task_id: str, status: TaskStatus) -> None:
         task = self._tasks[task_id]
         self._tasks[task_id] = task.model_copy(update={"status": status})

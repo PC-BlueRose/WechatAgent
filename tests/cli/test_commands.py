@@ -41,7 +41,7 @@ def test_due_now_delivers_pending_user_reminder():
         now=datetime(2026, 7, 3, 8, 0, tzinfo=UTC),
     )
 
-    assert result.output == "stretch."
+    assert result.output == "Remind me tomorrow morning to stretch."
     due_task = next(iter(session.store.tasks._tasks.values()))
     assert due_task.status is TaskStatus.SENT
 
