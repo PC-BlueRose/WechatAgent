@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 
+from wechat_agent.llm.minimax_gateway import MiniMaxLLMGateway
 from wechat_agent.cli.session import build_cli_session
 
 
@@ -34,3 +35,18 @@ def test_format_state_counts_tasks_by_status():
     output = session.format_state(now=datetime(2026, 7, 3, 22, 1, tzinfo=UTC))
 
     assert "Tasks: pending=1, sent=1" in output
+
+
+def test_build_cli_session_uses_fake_gateway_by_default():
+    session = build_cli_session()
+
+    assert session.orchestrator._llm.__class__.__name__ == "FakeLLMGateway"
+
+
+def test_build_cli_session_uses_minimax_gateway_when_configured(monkeypatch):
+    monkeypatch.setenv("WECHAT_AGENT_LLM_PROVIDER", "minimax")
+    monkeypatch.setenv("WECHAT_AGENT_MINIMAX_API_KEY", "test-key")
+
+    session = build_cli_session()
+
+    assert isinstance(session.orchestrator._llm, MiniMaxLLMGateway)

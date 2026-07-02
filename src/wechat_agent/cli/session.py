@@ -5,9 +5,11 @@ from datetime import UTC, datetime
 
 from wechat_agent.agent.orchestrator import AgentOrchestrator
 from wechat_agent.channels.test_channel import TestChannelAdapter
+from wechat_agent.config import load_settings
 from wechat_agent.domain.modes import AgentMode, ModeConfig
 from wechat_agent.domain.tasks import ScheduledTask, TaskStatus, TaskType
 from wechat_agent.llm.fake_gateway import FakeLLMGateway
+from wechat_agent.llm.minimax_gateway import MiniMaxLLMGateway
 from wechat_agent.memory.service import MemoryService
 from wechat_agent.policy.engine import PolicyEngine
 from wechat_agent.scheduler.service import SchedulerService
@@ -27,6 +29,13 @@ SUPPRESSED_CHECKIN_MESSAGES: dict[str, str] = {
         "Check-in suppressed: quiet mode blocks routine check-ins."
     ),
 }
+
+
+def _build_llm() -> FakeLLMGateway | MiniMaxLLMGateway:
+    settings = load_settings()
+    if settings.llm_provider == "minimax":
+        return MiniMaxLLMGateway(settings=settings.minimax)
+    return FakeLLMGateway()
 
 
 @dataclass
@@ -129,7 +138,7 @@ class CliSession:
 
 def build_cli_session() -> CliSession:
     store = InMemoryStore()
-    llm = FakeLLMGateway()
+    llm = _build_llm()
     policy = PolicyEngine(store.modes)
     memory = MemoryService(store=store, llm=llm)
     scheduler = SchedulerService(store=store, policy=policy)

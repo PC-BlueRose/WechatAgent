@@ -2,6 +2,11 @@
 
 Date: 2026-07-01
 
+Runtime baseline:
+
+- Python 3.12.10 baseline
+- PostgreSQL 16 target
+
 ## Purpose
 
 Build a long-running personal life Agent that can be deployed on a server, use remote large model APIs for reasoning, and eventually connect to WeChat as if it were a trusted friend. The Agent should proactively check in at useful times, respond naturally to user-initiated conversations, record life data, create reminders, analyze food photos, and build a durable memory of the user's habits, preferences, goals, and state over time.

@@ -52,6 +52,10 @@ class MemoryService:
         self, user_id: str, category: str, content: str, source_ref: str
     ) -> LongTermMemory:
         timestamp = datetime.now(UTC)
+        try:
+            embedding = self._llm.embed(content).embedding
+        except Exception:
+            embedding = None
         memory = LongTermMemory(
             memory_id=f"mem-{uuid4()}",
             user_id=user_id,
@@ -63,13 +67,16 @@ class MemoryService:
             created_at=timestamp,
             updated_at=timestamp,
             state=MemoryState.ACTIVE,
-            embedding=self._llm.embed(content).embedding,
+            embedding=embedding,
         )
         self._store.memories.save(memory)
         return memory
 
     def recall(self, user_id: str, query: str, limit: int = 5) -> list[LongTermMemory]:
-        query_embedding = self._llm.embed(query).embedding
+        try:
+            query_embedding = self._llm.embed(query).embedding
+        except Exception:
+            return []
         memories = self._store.memories.list_active(user_id)
         ranked = sorted(
             memories,

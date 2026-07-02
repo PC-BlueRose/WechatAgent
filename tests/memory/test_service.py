@@ -149,6 +149,11 @@ class MismatchedEmbeddingGateway(FakeLLMGateway):
         return EmbeddingResult(embedding=[0.2, 0.1])
 
 
+class FailingEmbeddingGateway(FakeLLMGateway):
+    def embed(self, text: str) -> EmbeddingResult:
+        raise RuntimeError("embedding unavailable")
+
+
 def test_memory_service_recall_raises_on_embedding_dimension_mismatch():
     store = InMemoryStore()
     service = MemoryService(store=store, llm=MismatchedEmbeddingGateway())
@@ -161,3 +166,24 @@ def test_memory_service_recall_raises_on_embedding_dimension_mismatch():
 
     with pytest.raises(ValueError, match="Embedding dimension mismatch"):
         service.recall(user_id="user-1", query="query", limit=1)
+
+
+def test_recall_returns_empty_list_when_embedding_lookup_fails():
+    store = InMemoryStore()
+    service = MemoryService(store=store, llm=FailingEmbeddingGateway())
+
+    assert service.recall("user-1", "hello") == []
+
+
+def test_remember_candidate_stores_none_embedding_when_embedding_fails():
+    store = InMemoryStore()
+    service = MemoryService(store=store, llm=FailingEmbeddingGateway())
+
+    memory = service.remember_candidate(
+        user_id="user-1",
+        category="preference",
+        content="User likes concise replies.",
+        source_ref="msg-1",
+    )
+
+    assert memory.embedding is None
