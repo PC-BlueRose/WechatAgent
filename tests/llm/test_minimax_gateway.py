@@ -1,3 +1,8 @@
+import json
+from dataclasses import replace
+from unittest.mock import patch
+from urllib.error import URLError
+
 from wechat_agent.config import MiniMaxSettings
 from wechat_agent.llm.fake_gateway import FakeLLMGateway
 from wechat_agent.llm.gateway import ChatRequest
@@ -115,6 +120,27 @@ def test_extract_life_events_returns_empty_result_on_malformed_json():
     assert result.needs_follow_up is False
 
 
+def test_extract_life_events_returns_empty_result_on_transport_failure():
+    gateway = MiniMaxLLMGateway(
+        settings=build_settings(),
+        fallback=FakeLLMGateway(),
+    )
+
+    with patch(
+        "wechat_agent.llm.minimax_gateway.request.urlopen",
+        side_effect=URLError("network down"),
+    ):
+        result = gateway.extract_life_events(
+            user_id="user-1",
+            source_message_id="msg-1",
+            text="I slept around 2.",
+        )
+
+    assert result.events == []
+    assert result.long_term_memory_candidates == []
+    assert result.needs_follow_up is False
+
+
 def test_embed_uses_embedding_model():
     gateway = StubMiniMaxGateway(
         settings=build_settings(),
@@ -151,3 +177,67 @@ def test_analyze_food_image_uses_fake_fallback_when_vision_model_is_configured()
 
     assert result.is_estimate is True
     assert "foods" in result.payload
+
+
+def test_post_json_builds_request_with_expected_endpoint_headers_timeout_and_body():
+    gateway = MiniMaxLLMGateway(
+        settings=build_settings(),
+        fallback=FakeLLMGateway(),
+    )
+    response_body = json.dumps({"ok": True}).encode("utf-8")
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def read(self):
+            return response_body
+
+    with patch("wechat_agent.llm.minimax_gateway.request.urlopen") as mock_urlopen:
+        mock_urlopen.return_value = FakeResponse()
+
+        result = gateway._post_json(
+            "/v1/embeddings", {"input": "hello", "model": "embed-model"}
+        )
+
+    assert result == {"ok": True}
+    request_arg = mock_urlopen.call_args.args[0]
+    timeout_arg = mock_urlopen.call_args.kwargs["timeout"]
+    assert request_arg.full_url == "https://api.minimax.chat/v1/embeddings"
+    assert request_arg.get_method() == "POST"
+    assert request_arg.get_header("Authorization") == "Bearer test-key"
+    assert request_arg.get_header("Content-type") == "application/json"
+    assert timeout_arg == 30
+    assert json.loads(request_arg.data.decode("utf-8")) == {
+        "input": "hello",
+        "model": "embed-model",
+    }
+
+
+def test_post_json_joins_base_url_when_configured_with_trailing_slash():
+    gateway = MiniMaxLLMGateway(
+        settings=build_settings(),
+        fallback=FakeLLMGateway(),
+    )
+    gateway._settings = replace(gateway._settings, base_url="https://api.minimax.chat/")
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def read(self):
+            return b"{}"
+
+    with patch("wechat_agent.llm.minimax_gateway.request.urlopen") as mock_urlopen:
+        mock_urlopen.return_value = FakeResponse()
+
+        gateway._post_json("/v1/text/chatcompletion_v2", {"model": "chat-model"})
+
+    request_arg = mock_urlopen.call_args.args[0]
+    assert request_arg.full_url == "https://api.minimax.chat/v1/text/chatcompletion_v2"

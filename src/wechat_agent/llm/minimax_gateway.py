@@ -57,6 +57,7 @@ class MiniMaxLLMGateway:
     def extract_life_events(
         self, user_id: str, source_message_id: str, text: str
     ) -> ExtractionResult:
+        empty_result = ExtractionResult(events=[])
         payload = {
             "model": self._settings.extraction_model,
             "messages": [
@@ -83,8 +84,8 @@ class MiniMaxLLMGateway:
                 },
             ],
         }
-        data = self._post_json("/v1/text/chatcompletion_v2", payload)
         try:
+            data = self._post_json("/v1/text/chatcompletion_v2", payload)
             raw = str(data["choices"][0]["message"]["content"])
             parsed = json.loads(raw)
             events = [
@@ -104,8 +105,8 @@ class MiniMaxLLMGateway:
                 needs_follow_up=bool(parsed.get("needs_follow_up", False)),
                 follow_up_question=parsed.get("follow_up_question"),
             )
-        except (KeyError, TypeError, ValueError, json.JSONDecodeError):
-            return ExtractionResult(events=[])
+        except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+            return empty_result
 
     def analyze_food_image(self, user_id: str, media_ref: str) -> ImageAnalysisResult:
         if self._settings.use_fake_vision_fallback:

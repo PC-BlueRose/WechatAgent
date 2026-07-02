@@ -32,10 +32,14 @@ class MemoryService:
         events: list[LifeEvent] = []
         recorded_at = datetime.now(UTC)
         for extracted in result.events:
+            try:
+                event_type = LifeEventType(extracted.event_type)
+            except ValueError:
+                continue
             event = LifeEvent(
                 event_id=f"event-{uuid4()}",
                 user_id=message.user_id,
-                event_type=LifeEventType(extracted.event_type),
+                event_type=event_type,
                 occurred_at=message.timestamp,
                 recorded_at=recorded_at,
                 source_message_id=message.message_id,
@@ -78,8 +82,11 @@ class MemoryService:
         except Exception:
             return []
         memories = self._store.memories.list_active(user_id)
+        embedded_memories = [
+            memory for memory in memories if memory.embedding is not None
+        ]
         ranked = sorted(
-            memories,
+            embedded_memories,
             key=lambda memory: (
                 self._embedding_distance(memory.embedding, query_embedding),
                 memory.created_at,
