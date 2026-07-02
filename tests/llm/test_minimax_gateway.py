@@ -27,7 +27,7 @@ def build_settings(
 ) -> MiniMaxSettings:
     return MiniMaxSettings(
         api_key="test-key",
-        base_url="https://api.minimax.chat",
+        base_url="https://api.minimaxi.com/v1",
         chat_model="chat-model",
         extraction_model="extract-model",
         embedding_model="embed-model",
@@ -66,6 +66,7 @@ def test_chat_uses_chat_model_and_returns_text():
     )
 
     assert response.content == "I am here. Take your time."
+    assert gateway.requests[0]["path"] == "/chat/completions"
     assert gateway.requests[0]["payload"]["model"] == "chat-model"
 
 
@@ -100,6 +101,7 @@ def test_extract_life_events_parses_json_payload():
 
     assert result.events[0].event_type == "sleep"
     assert result.events[0].payload["sleep_time"] == "02:00"
+    assert gateway.requests[0]["path"] == "/chat/completions"
     assert gateway.requests[0]["payload"]["model"] == "extract-model"
 
 
@@ -150,6 +152,7 @@ def test_embed_uses_embedding_model():
     result = gateway.embed("hello")
 
     assert result.embedding == [0.1, 0.2, 0.3]
+    assert gateway.requests[0]["path"] == "/embeddings"
     assert gateway.requests[0]["payload"]["model"] == "embed-model"
 
 
@@ -200,13 +203,13 @@ def test_post_json_builds_request_with_expected_endpoint_headers_timeout_and_bod
         mock_urlopen.return_value = FakeResponse()
 
         result = gateway._post_json(
-            "/v1/embeddings", {"input": "hello", "model": "embed-model"}
+            "/embeddings", {"input": "hello", "model": "embed-model"}
         )
 
     assert result == {"ok": True}
     request_arg = mock_urlopen.call_args.args[0]
     timeout_arg = mock_urlopen.call_args.kwargs["timeout"]
-    assert request_arg.full_url == "https://api.minimax.chat/v1/embeddings"
+    assert request_arg.full_url == "https://api.minimaxi.com/v1/embeddings"
     assert request_arg.get_method() == "POST"
     assert request_arg.get_header("Authorization") == "Bearer test-key"
     assert request_arg.get_header("Content-type") == "application/json"
@@ -222,7 +225,7 @@ def test_post_json_joins_base_url_when_configured_with_trailing_slash():
         settings=build_settings(),
         fallback=FakeLLMGateway(),
     )
-    gateway._settings = replace(gateway._settings, base_url="https://api.minimax.chat/")
+    gateway._settings = replace(gateway._settings, base_url="https://api.minimaxi.com/v1/")
 
     class FakeResponse:
         def __enter__(self):
@@ -237,7 +240,7 @@ def test_post_json_joins_base_url_when_configured_with_trailing_slash():
     with patch("wechat_agent.llm.minimax_gateway.request.urlopen") as mock_urlopen:
         mock_urlopen.return_value = FakeResponse()
 
-        gateway._post_json("/v1/text/chatcompletion_v2", {"model": "chat-model"})
+        gateway._post_json("/chat/completions", {"model": "chat-model"})
 
     request_arg = mock_urlopen.call_args.args[0]
-    assert request_arg.full_url == "https://api.minimax.chat/v1/text/chatcompletion_v2"
+    assert request_arg.full_url == "https://api.minimaxi.com/v1/chat/completions"

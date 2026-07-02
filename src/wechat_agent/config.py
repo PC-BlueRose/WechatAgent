@@ -39,9 +39,9 @@ def load_settings() -> AppSettings:
 
     minimax = MiniMaxSettings(
         api_key=os.getenv("WECHAT_AGENT_MINIMAX_API_KEY"),
-        base_url=os.getenv("WECHAT_AGENT_MINIMAX_BASE_URL", "https://api.minimax.chat"),
-        chat_model=os.getenv("WECHAT_AGENT_MINIMAX_CHAT_MODEL", "MiniMax-Text-01"),
-        extraction_model=os.getenv("WECHAT_AGENT_MINIMAX_EXTRACTION_MODEL", "MiniMax-Text-01"),
+        base_url=os.getenv("WECHAT_AGENT_MINIMAX_BASE_URL", "https://api.minimaxi.com/v1"),
+        chat_model=os.getenv("WECHAT_AGENT_MINIMAX_CHAT_MODEL", "MiniMax-M3"),
+        extraction_model=os.getenv("WECHAT_AGENT_MINIMAX_EXTRACTION_MODEL", "MiniMax-M3"),
         embedding_model=os.getenv("WECHAT_AGENT_MINIMAX_EMBEDDING_MODEL", "MiniMax-Embedding-01"),
         vision_model=os.getenv("WECHAT_AGENT_MINIMAX_VISION_MODEL"),
         timeout_seconds=int(os.getenv("WECHAT_AGENT_MINIMAX_TIMEOUT_SECONDS", "30")),

@@ -50,7 +50,7 @@ class MiniMaxLLMGateway:
                 },
             ],
         }
-        data = self._post_json("/v1/text/chatcompletion_v2", payload)
+        data = self._post_json("/chat/completions", payload)
         content = str(data["choices"][0]["message"]["content"])
         return ChatResponse(content=content)
 
@@ -85,7 +85,7 @@ class MiniMaxLLMGateway:
             ],
         }
         try:
-            data = self._post_json("/v1/text/chatcompletion_v2", payload)
+            data = self._post_json("/chat/completions", payload)
             raw = str(data["choices"][0]["message"]["content"])
             parsed = json.loads(raw)
             events = [
@@ -124,7 +124,7 @@ class MiniMaxLLMGateway:
             "model": self._settings.embedding_model,
             "input": text,
         }
-        data = self._post_json("/v1/embeddings", payload)
+        data = self._post_json("/embeddings", payload)
         embedding = [float(value) for value in data["data"][0]["embedding"]]
         return EmbeddingResult(embedding=embedding)
 
