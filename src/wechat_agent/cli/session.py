@@ -22,6 +22,12 @@ CHECKIN_TASKS: dict[str, TaskType] = {
     "bedtime": TaskType.BEDTIME_WINDDOWN,
 }
 
+SUPPRESSED_CHECKIN_MESSAGES: dict[str, str] = {
+    "quiet_mode_blocks_routine_checkin": (
+        "Check-in suppressed: quiet mode blocks routine check-ins."
+    ),
+}
+
 
 @dataclass
 class CliSession:
@@ -73,6 +79,11 @@ class CliSession:
             source_message_id=None,
         )
         reply = self.orchestrator.handle_scheduled_task(task, now=timestamp)
+        if reply.metadata.get("suppressed"):
+            reason = str(reply.metadata.get("reason", "")).strip()
+            return SUPPRESSED_CHECKIN_MESSAGES.get(
+                reason, "Check-in suppressed by policy."
+            )
         if reply.content:
             self.channel.send(reply)
         return reply.content

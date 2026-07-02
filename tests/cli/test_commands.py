@@ -1,5 +1,7 @@
 from datetime import UTC, datetime
 
+import pytest
+
 from wechat_agent.cli.commands import run_command
 from wechat_agent.cli.session import build_cli_session
 from wechat_agent.domain.modes import AgentMode, ModeConfig
@@ -26,6 +28,22 @@ def test_checkin_command_sends_immediate_proactive_message():
 
     assert "How did you sleep last night" in result.output
     assert session.channel.sent_messages[-1].content == result.output
+
+
+def test_checkin_command_surfaces_quiet_mode_suppression():
+    session = build_cli_session()
+    run_command(session, "/mode quiet", now=datetime(2026, 7, 2, 7, 59, tzinfo=UTC))
+
+    result = run_command(
+        session,
+        "/checkin morning",
+        now=datetime(2026, 7, 2, 8, 0, tzinfo=UTC),
+    )
+
+    assert result.output == "Check-in suppressed: quiet mode blocks routine check-ins."
+    suppressed_task = next(iter(session.store.tasks._tasks.values()))
+    assert suppressed_task.status is TaskStatus.EXPIRED
+    assert session.channel.sent_messages == []
 
 
 def test_due_now_delivers_pending_user_reminder():
@@ -87,3 +105,22 @@ def test_unknown_command_returns_help_hint():
     result = run_command(session, "/wat", now=datetime(2026, 7, 2, 9, 0, tzinfo=UTC))
 
     assert result.output == "Unknown command. Use /help to view available commands."
+
+
+@pytest.mark.parametrize(
+    ("raw_input", "expected_output"),
+    [
+        ("/help now", "Usage: /help"),
+        ("/state please", "Usage: /state"),
+        ("/exit now", "Usage: /exit"),
+    ],
+)
+def test_zero_argument_commands_reject_extra_arguments(
+    raw_input: str, expected_output: str
+):
+    session = build_cli_session()
+
+    result = run_command(session, raw_input, now=datetime(2026, 7, 2, 9, 0, tzinfo=UTC))
+
+    assert result.output == expected_output
+    assert result.exit_requested is False

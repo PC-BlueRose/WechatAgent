@@ -35,10 +35,16 @@ def run_command(
 
     command = parts[0]
     if command == "/help":
+        if len(parts) != 1:
+            return CommandResult(output="Usage: /help")
         return CommandResult(output=HELP_TEXT)
     if command == "/exit":
+        if len(parts) != 1:
+            return CommandResult(output="Usage: /exit")
         return CommandResult(output="Bye.", exit_requested=True)
     if command == "/state":
+        if len(parts) != 1:
+            return CommandResult(output="Usage: /state")
         return CommandResult(output=session.format_state(now=timestamp))
     if command == "/mode":
         if len(parts) != 2 or parts[1] not in {"quiet", "daily", "coach"}:
